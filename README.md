@@ -9,6 +9,8 @@ takes a window of that app, so the agent starts with what earlier agents learned
 information. It never lets an agent do more than you allow, and Overshoulder's rules are the same with
 or without one.
 
+Browse them at [overshoulder.yepgent.com](https://overshoulder.yepgent.com).
+
 ## Use a profile
 
 Download the `.osp` file and open it. Overshoulder shows what the profile holds, including any notes
@@ -42,7 +44,8 @@ Overshoulder ships the registry's public key and refuses a signed file that was 
 Key `reg-1`: `f9e83d9b1ec3045d0816e34d58ec77092daf9beaaf4cf808cdc30d13de87620a` (Ed25519).
 
 The files in this repository are the ones people submitted, without signatures. The signed copies and
-the catalog, `index.json` with its signature `index.json.sig`, are built on every merge.
+the catalog, `index.json` with its signature `index.json.sig`, are built on every merge and published
+with the site, which [`site/`](site) builds from them.
 
 ## Licence
 

@@ -1,0 +1,29 @@
+name: site
+
+# The site's own tests: every page and link is built, profile text is escaped, and a changed file stops
+# the build. Profiles are signed here with a throwaway key; the real key never leaves the publish job.
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/site.yml"]
+  pull_request:
+    paths: ["site/**", ".github/workflows/site.yml"]
+
+permissions:
+  contents: read
+
+env:
+  OVERSHOULDER: git+https://github.com/drknowhow/overshoulder@9c374e6e3fef83ad57c7e1f2cbacb0335a29bd4b
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --quiet "overshoulder @ $OVERSHOULDER" pytest
+      - run: python -m pytest -q -p no:cacheprovider site

@@ -1,8 +1,8 @@
 name: publish
 
-# On every merge: sign each profile and the catalog with the registry key, then check every signature
-# with the key Overshoulder ships before anything is published. The key is a secret of the "signing"
-# environment, which only main can use.
+# On every merge: sign each profile and the catalog with the registry key, check every signature with the
+# key Overshoulder ships, build overshoulder.yepgent.com from the result and deploy it to Netlify. The
+# signing key and the Netlify token are secrets of the "signing" environment, which only main can use.
 on:
   push:
     branches: [main]
@@ -48,7 +48,14 @@ jobs:
               signed = sign.verify(share.read((d / p["path"]).read_bytes()))
               print(f"{p['path']}: {signed.words()}")
           print(f"catalog: {len(index['profiles'])} profiles, signature checks out")
+      - name: Build the site
+        run: python site/build.py --dist dist
       - uses: actions/upload-artifact@v4
         with:
           name: registry
           path: dist
+      - name: Deploy to overshoulder.yepgent.com
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: python site/deploy.py --dir dist
