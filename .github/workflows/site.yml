@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  OVERSHOULDER: git+https://github.com/drknowhow/overshoulder@9c374e6e3fef83ad57c7e1f2cbacb0335a29bd4b
+  OVERSHOULDER: git+https://github.com/drknowhow/overshoulder@8824a2a27365a8ee08713ded86d8f6db5da24317
 
 jobs:
   test:
