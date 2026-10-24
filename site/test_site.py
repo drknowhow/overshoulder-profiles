@@ -93,14 +93,18 @@ def _local_refs(page: str) -> list[str]:
 
 def test_every_page_and_every_local_link_is_there(dist):
     pages = sorted(dist.rglob("*.html"))
-    assert {p.relative_to(dist).as_posix() for p in pages} == {
-        "index.html", "404.html", f"apps/{CALC}/index.html", f"apps/{CALC}/yepgent/index.html",
-        f"apps/{NOTEPAD}/index.html", f"apps/{NOTEPAD}/someone/index.html"}
+    calc, notepad = CALC.lower(), NOTEPAD.lower()
+    # lower() on both sides: on Windows a page folder lands in the mixed-case one its .osp file made
+    assert {p.relative_to(dist).as_posix().lower() for p in pages} == {
+        "index.html", "404.html", f"apps/{calc}/index.html", f"apps/{calc}/yepgent/index.html",
+        f"apps/{notepad}/index.html", f"apps/{notepad}/someone/index.html"}
     for p in pages:
         text = p.read_text("utf-8")
         assert "<script" not in text, p
         for ref in _local_refs(text):
             target = ref.split("#")[0]
+            if target.endswith("/"):  # a page: Netlify would answer a mixed-case one with a 301
+                assert target == target.lower(), f"{p.relative_to(dist)} links to {ref}"
             target = target + "index.html" if target.endswith("/") else target
             assert (dist / target.lstrip("/")).is_file(), f"{p.relative_to(dist)} links to {ref}"
 
