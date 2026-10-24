@@ -1,0 +1,44 @@
+name: check
+
+# Runs the workflow from main, never from the pull request, so a pull request can't change what checks
+# it. Its files are checked out as data and never run: the checker is a pinned Overshoulder release.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  OVERSHOULDER: git+https://github.com/drknowhow/overshoulder@9c374e6e3fef83ad57c7e1f2cbacb0335a29bd4b
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --quiet "overshoulder @ $OVERSHOULDER"
+      - name: List the changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: >
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files"
+          --jq '.[] | [.status, .filename, (.previous_filename // "")] | @tsv' > changes.tsv
+      - name: Check the profiles
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: python -m overshoulder.registry check --author "$AUTHOR" --changes changes.tsv --root pr

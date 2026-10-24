@@ -1,0 +1,54 @@
+name: publish
+
+# On every merge: sign each profile and the catalog with the registry key, then check every signature
+# with the key Overshoulder ships before anything is published. The key is a secret of the "signing"
+# environment, which only main can use.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+env:
+  OVERSHOULDER: git+https://github.com/drknowhow/overshoulder@9c374e6e3fef83ad57c7e1f2cbacb0335a29bd4b
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: signing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --quiet "overshoulder @ $OVERSHOULDER"
+      - name: Sign the profiles and the catalog
+        env:
+          REGISTRY_SIGNING_KEY: ${{ secrets.REGISTRY_SIGNING_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m overshoulder.registry build --root . --out dist
+      - name: Check every signature with the key Overshoulder ships
+        shell: python
+        run: |
+          from pathlib import Path
+          from overshoulder import registry, share, sign
+          d = Path("dist")
+          index = registry.read_index((d / "index.json").read_bytes(), (d / "index.json.sig").read_text())
+          for p in index["profiles"]:
+              signed = sign.verify(share.read((d / p["path"]).read_bytes()))
+              print(f"{p['path']}: {signed.words()}")
+          print(f"catalog: {len(index['profiles'])} profiles, signature checks out")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry
+          path: dist
