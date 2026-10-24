@@ -93,32 +93,36 @@ def _local_refs(page: str) -> list[str]:
 
 def test_every_page_and_every_local_link_is_there(dist):
     pages = sorted(dist.rglob("*.html"))
-    assert {p.relative_to(dist).as_posix() for p in pages} == {
-        "index.html", "404.html", f"apps/{CALC}/index.html", f"apps/{CALC}/yepgent/index.html",
-        f"apps/{NOTEPAD}/index.html", f"apps/{NOTEPAD}/someone/index.html"}
+    calc, notepad = CALC.lower(), NOTEPAD.lower()
+    # lower() on both sides: on Windows a page folder lands in the mixed-case one its .osp file made
+    assert {p.relative_to(dist).as_posix().lower() for p in pages} == {
+        "index.html", "404.html", f"apps/{calc}/index.html", f"apps/{calc}/yepgent/index.html",
+        f"apps/{notepad}/index.html", f"apps/{notepad}/someone/index.html"}
     for p in pages:
         text = p.read_text("utf-8")
         assert "<script" not in text, p
         for ref in _local_refs(text):
             target = ref.split("#")[0]
+            if target.endswith("/"):  # a page: Netlify would answer a mixed-case one with a 301
+                assert target == target.lower(), f"{p.relative_to(dist)} links to {ref}"
             target = target + "index.html" if target.endswith("/") else target
             assert (dist / target.lstrip("/")).is_file(), f"{p.relative_to(dist)} links to {ref}"
 
 
 def test_text_from_a_profile_is_escaped(dist):
-    page = (dist / f"apps/{NOTEPAD}/someone/index.html").read_text("utf-8")
+    page = (dist / f"apps/{NOTEPAD.lower()}/someone/index.html").read_text("utf-8")
     assert "<script>alert(1)" not in page and "<b>bold</b>" not in page
     assert '<q class="said">&lt;script&gt;alert(1)&lt;/script&gt; &amp; &lt;b&gt;bold&lt;/b&gt;</q>' in page
 
 
 def test_a_profile_page_says_what_it_holds_in_words(dist):
-    calc = (dist / f"apps/{CALC}/yepgent/index.html").read_text("utf-8")
+    calc = (dist / f"apps/{CALC.lower()}/yepgent/index.html").read_text("utf-8")
     assert "Reviewed on the registry, published by" in calc and "pull request #1</a> on 2 Nov 2026" in calc
     assert "Invoke on a button, through UI Automation&#x27;s invoke: worked 29 of 29." in calc
     assert "1 control (list item) named by the person's own content" in calc
     assert "<i>invoke Open Navigation</i>, then <i>select Scientific Calculator</i>. Agents have followed it 2 times." in calc
     assert 'download="calculator.osp"' in calc
-    notepad = (dist / f"apps/{NOTEPAD}/someone/index.html").read_text("utf-8")
+    notepad = (dist / f"apps/{NOTEPAD.lower()}/someone/index.html").read_text("utf-8")
     assert "worked 0 of 3, so agents try another method first." in notepad
     assert "Hotkey on the focused control" in notepad
     assert "you were asked before agents used it" in notepad

@@ -95,12 +95,14 @@ def type_word(t: str) -> str:
     return TYPE_WORDS.get(t.lower(), t)
 
 
+# Pages live at lower-case paths because Netlify answers a mixed-case folder with a 301 to its lower-case
+# spelling. Files keep their registry paths: Netlify serves those in any case.
 def app_url(app: str) -> str:
-    return f"/apps/{quote(app)}/"
+    return f"/apps/{quote(app.lower())}/"
 
 
 def profile_url(entry: dict) -> str:
-    return f"/apps/{quote(entry['app'])}/{quote(entry['by'])}/"
+    return f"/apps/{quote(entry['app'].lower())}/{quote(entry['by'].lower())}/"
 
 
 def file_name(entry: dict) -> str:
@@ -441,10 +443,10 @@ def build(dist: Path, keys: dict[str, str] | None = None) -> dict:
     urls = ["/"]
     _write(dist / "index.html", home(index, apps, css))
     for app, entries in apps.items():
-        _write(dist / "apps" / app / "index.html", app_page(index, entries, css))
+        _write(dist / "apps" / app.lower() / "index.html", app_page(index, entries, css))
         urls.append(app_url(app))
     for entry, prof, signed, text in loaded:
-        _write(dist / "apps" / entry["app"] / entry["by"] / "index.html",
+        _write(dist / "apps" / entry["app"].lower() / entry["by"].lower() / "index.html",
                profile_page(index, entry, prof, signed, text, css))
         urls.append(profile_url(entry))
     _write(dist / "404.html", not_found(index, css))
